@@ -20,9 +20,9 @@
     "start": "teq web:start"
   },
   "dependencies": {
-    "@flancer32/pde-runtime": "github:flancer32/pde-runtime#main",
-    "@flancer32/pde-desk-telegram": "github:flancer32/pde-desk-telegram#main",
-    "@flancer32/pde-sdk": "github:flancer32/pde-sdk#main",
+    "@flancer32/pde-runtime": "git+https://github.com/flancer32/pde-runtime.git#main",
+    "@flancer32/pde-desk-telegram": "git+https://github.com/flancer32/pde-desk-telegram.git#main",
+    "@flancer32/pde-sdk": "git+https://github.com/flancer32/pde-sdk.git#main",
     "@teqfw/cli": "^2.2.0"
   }
 }
