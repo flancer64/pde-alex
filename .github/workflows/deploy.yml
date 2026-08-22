@@ -24,7 +24,10 @@ jobs:
           node-version: 24
 
       - name: Authorize GitHub package sources
-        run: git config --global url."https://x-access-token:${{ secrets.PDE_PACKAGES_READ_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.PDE_PACKAGES_READ_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global --add url."https://x-access-token:${{ secrets.PDE_PACKAGES_READ_TOKEN }}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://x-access-token:${{ secrets.PDE_PACKAGES_READ_TOKEN }}@github.com/".insteadOf "git@github.com:"
 
       - name: Install production dependencies
         working-directory: ${{ env.APP_ROOT }}
