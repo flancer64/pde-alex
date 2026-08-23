@@ -1,10 +1,17 @@
 name: LIVE - Build & Deploy PDE Alex
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-pde-alex
+  cancel-in-progress: false
 
 env:
   APP_DIR: ${{ vars.APP_DIR }}
-  APP_ROOT: app/pde-alex
   PRJ: pde-alex
   SERVICE: pde-alex.service
 
@@ -13,35 +20,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out the application repository
-        uses: actions/checkout@v5
+      - name: Check out repository
+        uses: actions/checkout@v7
         with:
-          path: ${{ env.APP_ROOT }}
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
 
-      - name: Authorize GitHub package sources
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.PDE_PACKAGES_READ_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          git config --global --add url."https://x-access-token:${{ secrets.PDE_PACKAGES_READ_TOKEN }}@github.com/".insteadOf "ssh://git@github.com/"
-
       - name: Install production dependencies
-        working-directory: ${{ env.APP_ROOT }}
-        run: npm install --install-links --omit=dev --omit=optional
+        env:
+          GH_PAT: ${{ secrets.PDE_PACKAGES_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          AUTH="$(printf 'x-access-token:%s' "$GH_PAT" | base64 -w0)"
+          echo "::add-mask::$AUTH"
+
+          GIT_CONFIG_COUNT=1 \
+          GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+          GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $AUTH" \
+          npm install \
+            --install-links \
+            --omit=dev \
+            --omit=optional \
+            --no-audit \
+            --no-fund
 
       - name: Build deployment archive
-        working-directory: ${{ env.APP_ROOT }}
-        run: zip -qq -r "${{ env.PRJ }}.zip" . -x '.git/*' '.env' 'var/*'
+        run: |
+          set -euo pipefail
+
+          zip -qq -r "$RUNNER_TEMP/${PRJ}.zip" . \
+            -x '.git/*' '.env' 'var/*'
 
       - name: Upload deployment archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-archive
-          path: ${{ env.APP_ROOT }}/${{ env.PRJ }}.zip
+          path: ${{ runner.temp }}/${{ env.PRJ }}.zip
           retention-days: 1
+          if-no-files-found: error
 
   publish:
     needs: build
@@ -49,23 +70,13 @@ jobs:
 
     steps:
       - name: Download deployment archive
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: app-archive
           path: .
 
-      - name: Validate SSH connection
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ vars.HOST }}
-          username: ${{ vars.USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            pwd
-            whoami
-
-      - name: Copy deployment archive to the server
-        uses: appleboy/scp-action@master
+      - name: Copy deployment archive
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ vars.HOST }}
           username: ${{ vars.USER }}
@@ -73,8 +84,8 @@ jobs:
           source: ${{ env.PRJ }}.zip
           target: ${{ env.APP_DIR }}
 
-      - name: Switch the application release
-        uses: appleboy/ssh-action@master
+      - name: Switch application release
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ vars.HOST }}
           username: ${{ vars.USER }}
@@ -82,35 +93,54 @@ jobs:
           script: |
             set -e
 
-            cd "${{ env.APP_DIR }}"
+            APP_DIR="${{ env.APP_DIR }}"
+            PRJ="${{ env.PRJ }}"
+            SERVICE="${{ env.SERVICE }}"
+
+            cd "$APP_DIR"
+
             rm -rf prod.new
-            mkdir -p prod.new
-            unzip -qq "${{ env.PRJ }}.zip" -d prod.new
+            mkdir prod.new
+            unzip -qq "${PRJ}.zip" -d prod.new
 
-            TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+            sudo /bin/systemctl stop "$SERVICE" || true
 
-            sudo /bin/systemctl stop "${{ env.SERVICE }}" || true
+            if [ -f prod/.env ]; then
+              cp -p prod/.env prod.new/.env
+            fi
+
+            if [ -d prod/var ]; then
+              mkdir -p prod.new/var
+              cp -a prod/var/. prod.new/var/
+            fi
 
             rm -rf prod.old
+
             if [ -d prod ]; then
               mv prod prod.old
-            else
-              mkdir -p prod.old
             fi
 
             mv prod.new prod
 
-            if [ -f prod.old/.env ]; then
-              cp prod.old/.env prod/.env
+            if sudo /bin/systemctl start "$SERVICE" \
+              && systemctl is-active --quiet "$SERVICE"; then
+
+              TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+              mv "${PRJ}.zip" "${PRJ}-${TIMESTAMP}.zip"
+              exit 0
             fi
 
-            if [ -d prod.old/var ]; then
-              mkdir -p prod/var
-              cp -a prod.old/var/. prod/var/
+            echo "New release failed. Rolling back."
+
+            sudo /bin/systemctl stop "$SERVICE" || true
+
+            rm -rf prod.failed
+            mv prod prod.failed
+
+            if [ -d prod.old ]; then
+              mv prod.old prod
+              sudo /bin/systemctl start "$SERVICE"
+              systemctl is-active --quiet "$SERVICE"
             fi
 
-            mv "${{ env.PRJ }}.zip" "${{ env.PRJ }}-${TIMESTAMP}.zip"
-
-            sudo /bin/systemctl start "${{ env.SERVICE }}"
-            systemctl is-active --quiet "${{ env.SERVICE }}"
-            ls -lh "${{ env.APP_DIR }}"
+            exit 1
