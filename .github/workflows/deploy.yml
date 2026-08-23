@@ -54,7 +54,7 @@ jobs:
           set -euo pipefail
 
           zip -qq -r "$RUNNER_TEMP/${PRJ}.zip" . \
-            -x '.git/*' '.env' 'var/*'
+            -x '.git/*' '.github/*' '.env' 'var/*'
 
       - name: Upload deployment archive
         uses: actions/upload-artifact@v7
