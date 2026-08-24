@@ -23,6 +23,7 @@
     "@flancer32/pde-runtime": "git+https://github.com/flancer32/pde-runtime.git#main",
     "@flancer32/pde-desk-telegram": "git+https://github.com/flancer32/pde-desk-telegram.git#main",
     "@flancer32/pde-sdk": "git+https://github.com/flancer32/pde-sdk.git#main",
+    "@prebuilt-tdlib/linux-x64-glibc": "0.1008066.0",
     "@teqfw/cli": "^2.2.0",
     "pg": "^8.23.0"
   }

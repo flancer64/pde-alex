@@ -45,7 +45,6 @@ jobs:
           npm install \
             --install-links \
             --omit=dev \
-            --omit=optional \
             --no-audit \
             --no-fund
 
