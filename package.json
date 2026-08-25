@@ -9,10 +9,20 @@
   },
   "teqfw": {
     "fw": {
+      "di": {
+        "namespaces": [
+          {
+            "prefix": "Pde_Alex_",
+            "path": "./src",
+            "ext": ".mjs"
+          }
+        ]
+      },
       "cli": {
         "command": {
           "default": "web:start"
-        }
+        },
+        "plugin": "Pde_Alex_Cli_Plugin$"
       }
     }
   },
