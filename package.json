@@ -19,6 +19,9 @@
         ]
       },
       "cli": {
+        "container": {
+          "configurator": "./bootstrap/di-config.mjs"
+        },
         "command": {
           "default": "web:start"
         },
@@ -27,6 +30,11 @@
             "id": "db:migrate-runtime-schema",
             "summary": "Migrate the recognized legacy Runtime PostgreSQL schema without discarding source rows.",
             "component": "Pde_Alex_Cli_Command_RuntimeSchemaMigrate$"
+          },
+          {
+            "id": "app:migrate:260831",
+            "summary": "Rebuild the Runtime DEM schema and preserve readable rows.",
+            "component": "Pde_Alex_Cli_Command_RuntimeSchemaRebuild$"
           }
         ],
         "plugin": "Pde_Alex_Cli_Plugin$"
