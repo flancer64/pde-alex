@@ -15,6 +15,10 @@ export default class Configurator {
     configure({argv, applicationRoot}) {
         const worldMap = new WorldMapConfigurator().configure({argv, applicationRoot});
         const preprocessors = [...(worldMap.preprocessors ?? [])];
+        if (argv.includes('db:migrate')) preprocessors.push(function (dependency) {
+            if (dependency.moduleName !== 'Pde_Runtime_Cli_Command_DbMigrate') return dependency;
+            return Object.freeze({...dependency, moduleName: 'Pde_Alex_Cli_Command_LegacyRuntimeMigration'});
+        });
         return {preprocessors};
     }
 }
