@@ -39,8 +39,8 @@ jobs:
           AUTH="$(printf 'x-access-token:%s' "$GH_PAT" | base64 -w0)"
           echo "::add-mask::$AUTH"
 
-          git config --global url."https://github.com/".insteadOf ssh://git@github.com/
-          git config --global url."https://github.com/".insteadOf git@github.com:
+          git config --global --add url."https://github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://github.com/".insteadOf git@github.com:
 
           GIT_CONFIG_COUNT=1 \
           GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
