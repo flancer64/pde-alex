@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@flancer32/pde-desk-echo": "git+https://github.com/flancer32/pde-desk-echo.git#main",
+    "@flancer32/pde-desk-files": "git+https://github.com/flancer32/pde-desk-files.git#main",
     "@flancer32/pde-desk-telegram": "git+https://github.com/flancer32/pde-desk-telegram.git#main",
     "@flancer32/pde-desk-world-map": "git+https://github.com/flancer32/pde-desk-world-map.git#main",
     "@flancer32/pde-runtime": "git+https://github.com/flancer32/pde-runtime.git#main",
