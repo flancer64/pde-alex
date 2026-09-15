@@ -7,9 +7,9 @@
 
 /** @param {object} deps @param {Pde_Alex_Storage_LegacyRuntimeMigration} deps.migration @param {TeqFw_Cli_Adapter_Io} deps.io @returns {TeqFw_Cli_Dto_Command} */
 export default function LegacyRuntimeMigration({migration, io}) {
-    return Object.freeze({id: 'db:migrate-legacy-runtime', summary: 'Migrate the legacy Runtime schema and retain source backups.', lifetime: 'finite', execute: async function () {
+    return Object.freeze({id: 'db:migrate', summary: 'Rebuild the Runtime DEM from a recognized predecessor and retain source backups.', lifetime: 'finite', execute: async function () {
         const result = await migration.execute();
-        io.write(`Legacy Runtime migration ${result.status}. Backups: ${result.backups.length}.\n`);
+        io.write(`Runtime DEM migration ${result.status}. Source backups: ${result.backups.length}.\n`);
     }});
 }
 
