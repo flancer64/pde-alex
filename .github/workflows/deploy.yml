@@ -125,7 +125,7 @@ jobs:
             mv prod.new prod
 
             cd "$APP_DIR/prod"
-            npm exec -- teq db:migrate
+            bash -lc 'npm exec -- teq db:migrate'
             cd "$APP_DIR"
 
             if sudo /bin/systemctl start "$SERVICE" \
