@@ -125,7 +125,11 @@ jobs:
             mv prod.new prod
 
             cd "$APP_DIR/prod"
-            bash -lc 'npm exec -- teq db:migrate'
+            NODE_EXECUTABLE="$(sudo /bin/systemctl show "$SERVICE" --property=ExecStart --value | sed -n 's/.*path=\([^ ;]*\).*/\1/p')"
+            if [ -n "$NODE_EXECUTABLE" ]; then
+              export PATH="$(dirname "$NODE_EXECUTABLE"):$PATH"
+            fi
+            npx teq db:migrate
             cd "$APP_DIR"
 
             if sudo /bin/systemctl start "$SERVICE" \
