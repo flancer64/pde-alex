@@ -95,6 +95,33 @@ async function hasTable(connection, name) {
     return connection.getSchemaBuilder().hasTable(name);
 }
 
+/** @param {readonly string[]} names @returns {readonly string[]} */
+function cleanupOrder(names) {
+    /** @param {string} name @returns {number} */
+    const rank = (name) => name.endsWith('_teqfw_db_schema_application') ? 0
+        : name.endsWith('_teqfw_db_schema_snapshot') ? 1 : 2;
+    return [...new Set(names)].sort((left, right) => rank(left) - rank(right));
+}
+
+/**
+ * Remove source backups after the target and migration history are complete.
+ * History application tables must be dropped before snapshot tables because
+ * the former references the latter.
+ * @param {any} connection
+ * @param {readonly string[]} names
+ * @returns {Promise<readonly string[]>}
+ */
+async function dropSourceBackups(connection, names) {
+    const removed = [];
+    for (const name of cleanupOrder(names)) {
+        if (!name.startsWith(`${SOURCE_NAMESPACE}_`)) throw new Error(`Refusing to remove a non-source table '${name}'.`);
+        if (!await hasTable(connection, name)) continue;
+        await connection.getSchemaBuilder().dropTableIfExists(name);
+        removed.push(name);
+    }
+    return Object.freeze(removed);
+}
+
 /** @param {any} connection @param {string} name @returns {Promise<readonly string[]>} */
 async function columnsOf(connection, name) {
     if (!await hasTable(connection, name)) return [];
@@ -120,7 +147,8 @@ function predecessorDefinition(targetCompilation, variant) {
 
 /**
  * Detect and prepare one recognized predecessor. Existing source tables are
- * moved to a separate physical namespace; their rows are never deleted.
+ * moved to a separate physical namespace and retained until the target and
+ * migration history have been verified.
  * @param {any} connection
  * @param {any} sourceCompilation
  * @param {any} targetCompilation
@@ -333,7 +361,12 @@ export default class LegacyRuntimeMigration {
                 const runtime = schemaProvider.getFragmentEnvelope();
                 const target = compile.assertResult({value: await compile.exec({adapter, fragments: [runtime, dbFragment], mapEnvelope: schemaProvider.getMapEnvelope()})});
                 const targetCatalog = await history.validateCatalog({compilation: target, connection});
-                if (targetCatalog.matches) return Object.freeze({...await completeHistory({history, compilation: target, connection}), backups: []});
+                if (targetCatalog.matches) {
+                    const historyResult = await completeHistory({history, compilation: target, connection});
+                    const sourceNames = target.physical.tables.map(({name}) => `${SOURCE_NAMESPACE}_${name}`);
+                    const backups = await dropSourceBackups(connection, sourceNames);
+                    return Object.freeze({...historyResult, backups});
+                }
 
                 const sourceMap = {version: 2, namespace: SOURCE_NAMESPACE, ref: {}, deprecated: {}};
                 let selected;
@@ -371,7 +404,8 @@ export default class LegacyRuntimeMigration {
                     throw new Error('Runtime DEM rebuild did not produce complete verified evidence; source tables were retained.');
                 }
                 const historyResult = await completeHistory({history, compilation: target, connection});
-                return Object.freeze({...historyResult, backups: selected.profile.renames.map(({to}) => to)});
+                const backups = await dropSourceBackups(connection, selected.profile.renames.map(({to}) => to));
+                return Object.freeze({...historyResult, backups});
             } finally {
                 if (sourceConnection) await sourceConnection.disconnect();
                 if (startedConnection) await connection.disconnect();
