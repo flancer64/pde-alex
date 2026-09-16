@@ -28,7 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
 
       - name: Install production dependencies
         env:
@@ -131,7 +131,7 @@ jobs:
               exit 1
             fi
             . "$NVM_DIR/nvm.sh"
-            nvm use --silent 22.14.0
+            nvm use --silent
             npx --no-install teq db:migrate
             cd "$APP_DIR"
 
