@@ -20,13 +20,17 @@ const ENTITY = Object.freeze({
     oauthClient: '/pde/runtime/oauth/client', oauthPolicy: '/pde/runtime/oauth/policy',
     accessToken: '/pde/runtime/oauth/token/access', refreshToken: '/pde/runtime/oauth/token/refresh',
     personSession: '/pde/runtime/person/session', mandate: '/pde/runtime/mandate',
-    trustedPerson: '/pde/runtime/trusted/person', trustedPersonSession: '/pde/runtime/trusted/session',
-    trustedPersonChallenge: '/pde/runtime/trusted/auth/challenge', trustedPersonLoginRequest: '/pde/runtime/trusted/auth/request',
+    delegatePerson: '/pde/runtime/delegate/person', delegateSession: '/pde/runtime/delegate/session',
+    delegateChallenge: '/pde/runtime/delegate/auth/challenge', delegateLoginRequest: '/pde/runtime/delegate/auth/request',
     snapshot: '/teqfw/db/schema/snapshot', application: '/teqfw/db/schema/application',
 });
 const V3_ENTITIES = Object.freeze(['personSession', 'client', 'accessToken', 'refreshToken', 'oauthClient', 'oauthPolicy', 'delegation', 'audit', 'snapshot', 'application']);
-const PREVIOUS_ENTITIES = Object.freeze(['personSession', 'client', 'accessToken', 'refreshToken', 'oauthClient', 'oauthPolicy', 'delegation', 'audit', 'mandate', 'trustedPerson', 'snapshot', 'application']);
+const PREVIOUS_ENTITIES = Object.freeze(['personSession', 'client', 'accessToken', 'refreshToken', 'oauthClient', 'oauthPolicy', 'delegation', 'audit', 'mandate', 'delegatePerson', 'delegateSession', 'delegateChallenge', 'delegateLoginRequest', 'snapshot', 'application']);
 const LEGACY_ENTITIES = Object.freeze(['accessToken', 'audit', 'delegation', 'oauthClient', 'personSession']);
+const PREVIOUS_TABLES = Object.freeze({
+    delegatePerson: 'pde_runtime_trusted_person', delegateSession: 'pde_runtime_trusted_session',
+    delegateChallenge: 'pde_runtime_trusted_auth_challenge', delegateLoginRequest: 'pde_runtime_trusted_auth_request',
+});
 
 /** @param {number} length @param {boolean} [nullable] @returns {object} */
 const stringAttr = (length, nullable = false) => ({...(nullable ? {nullable: true} : {}), type: {id: 'core.string', params: {length}}});
@@ -50,11 +54,6 @@ const LEGACY_ATTR = Object.freeze({
     audit: Object.freeze({capability_id: stringAttr(255, true), client_id: stringAttr(2048, true), decision: stringAttr(32, true), delegation_id: stringAttr(128, true), event_type: stringAttr(128), id: stringAttr(128), occurred_at: dateAttr(), reason: stringAttr(255, true), resource: stringAttr(2048, true)}),
     delegation: Object.freeze({capability_id: stringAttr(255), client_id: stringAttr(2048), created_at: dateAttr(), id: stringAttr(128), resource: stringAttr(2048), resource_connection_id: stringAttr(1024, true), revoked_at: dateAttr(true)}),
 });
-const PREVIOUS_ATTR = Object.freeze({trustedPerson: Object.freeze({
-    id: stringAttr(128), display_name: stringAttr(200), status: {type: {id: 'core.enum', params: {values: ['active', 'disabled', 'revoked']}}},
-    created_at: dateAttr(), updated_at: dateAttr(),
-})});
-
 /** @param {object} declaration @param {string} path @returns {any} */
 function entityAt(declaration, path) {
     const parts = path.split('/').filter(Boolean);
@@ -73,11 +72,37 @@ function replaceEntityShape(declaration, path, attr, index) {
     entity.relation = {};
 }
 
+/** @param {object} declaration @param {string} path @param {string} from @param {string} to */
+function renameEntityAttribute(declaration, path, from, to) {
+    const entity = entityAt(declaration, path);
+    if (!entity.attr?.[from]) throw new Error(`Runtime DEM attribute '${path}/${from}' is absent from the installed declaration.`);
+    entity.attr[to] = entity.attr[from];
+    delete entity.attr[from];
+    for (const index of Object.values(entity.index ?? {})) {
+        for (const key of index.keys ?? []) if (key.attr === from) key.attr = to;
+        if (index.include) index.include = index.include.map((name) => name === from ? to : name);
+    }
+    for (const relation of Object.values(entity.relation ?? {})) relation.attrs = (relation.attrs ?? []).map((name) => name === from ? to : name);
+}
+
+/** @param {object} declaration @param {string} path @param {string} attrName @param {string} from @param {string} to */
+function renameEnumValue(declaration, path, attrName, from, to) {
+    const attr = entityAt(declaration, path).attr?.[attrName];
+    if (!attr?.type?.params?.values) throw new Error(`Runtime DEM enum '${path}/attr/${attrName}' is absent from the installed declaration.`);
+    attr.type.params.values = attr.type.params.values.map((value) => value === from ? to : value);
+}
+
 /** @param {object} declaration @param {'previous'|'v3'|'legacy'} variant @returns {object} */
 function createSourceDeclaration(declaration, variant) {
     const source = structuredClone(declaration);
     if (variant === 'previous') {
-        replaceEntityShape(source, ENTITY.trustedPerson, PREVIOUS_ATTR.trustedPerson, {pk: primary('id'), status: btree(['status'])});
+        renameEntityAttribute(source, ENTITY.mandate, 'delegate_id', 'trusted_person_id');
+        renameEntityAttribute(source, ENTITY.audit, 'delegate_id', 'trusted_person_id');
+        renameEntityAttribute(source, ENTITY.delegateSession, 'delegate_id', 'trusted_person_id');
+        renameEntityAttribute(source, ENTITY.delegateChallenge, 'delegate_id', 'trusted_person_id');
+        renameEnumValue(source, ENTITY.client, 'controller_kind', 'delegate', 'trusted-person');
+        renameEnumValue(source, ENTITY.delegation, 'grantor_kind', 'delegate', 'trusted-person');
+        renameEnumValue(source, ENTITY.audit, 'grantor_kind', 'delegate', 'trusted-person');
     } else if (variant === 'v3') {
         replaceEntityShape(source, ENTITY.client, V3_ATTR.client, {pk: primary('client_id')});
         replaceEntityShape(source, ENTITY.delegation, V3_ATTR.delegation, {pk: primary('id'), lookup: btree(['client_id', 'capability_id'])});
@@ -93,6 +118,19 @@ function createSourceDeclaration(declaration, variant) {
 /** @param {any} connection @param {string} name @returns {Promise<boolean>} */
 async function hasTable(connection, name) {
     return connection.getSchemaBuilder().hasTable(name);
+}
+
+/** @param {any} connection @returns {Promise<readonly string[]>} */
+async function sourceBackupNames(connection) {
+    const db = connection.getClient();
+    const description = await connection.getDialectAdapter().describe();
+    if (description.id === 'postgresql') {
+        return (await db('pg_catalog.pg_tables').select('tablename').where({schemaname: 'public'}).whereLike('tablename', `${SOURCE_NAMESPACE}_%`)).map(({tablename}) => tablename);
+    }
+    if (description.id.startsWith('sqlite')) {
+        return (await db('sqlite_master').select('name').where({type: 'table'}).whereLike('name', `${SOURCE_NAMESPACE}_%`)).map(({name}) => name);
+    }
+    return [];
 }
 
 /** @param {readonly string[]} names @returns {readonly string[]} */
@@ -113,12 +151,15 @@ function cleanupOrder(names) {
  */
 async function dropSourceBackups(connection, names) {
     const removed = [];
-    for (const name of cleanupOrder(names)) {
+    const candidates = [...new Set([...names, ...(await sourceBackupNames(connection))])];
+    for (const name of cleanupOrder(candidates)) {
         if (!name.startsWith(`${SOURCE_NAMESPACE}_`)) throw new Error(`Refusing to remove a non-source table '${name}'.`);
         if (!await hasTable(connection, name)) continue;
         await connection.getSchemaBuilder().dropTableIfExists(name);
         removed.push(name);
     }
+    const remaining = await sourceBackupNames(connection);
+    if (remaining.length) throw new Error(`Source backup tables remain after successful migration: ${remaining.join(', ')}.`);
     return Object.freeze(removed);
 }
 
@@ -138,7 +179,7 @@ function sameColumns(actual, expected) {
 function predecessorDefinition(targetCompilation, variant) {
     const targetTables = Object.fromEntries(targetCompilation.physical.tables.map((table) => [table.entity, table.name]));
     const names = variant === 'previous'
-        ? Object.fromEntries(PREVIOUS_ENTITIES.map((key) => [key, targetTables[ENTITY[key]]]))
+        ? {...Object.fromEntries(PREVIOUS_ENTITIES.map((key) => [key, targetTables[ENTITY[key]]])), ...PREVIOUS_TABLES}
         : variant === 'v3'
             ? Object.fromEntries(V3_ENTITIES.map((key) => [key, targetTables[ENTITY[key]]]))
         : {accessToken: 'pde_runtime_access_token', audit: 'pde_runtime_audit_event', delegation: 'pde_runtime_delegation', oauthClient: 'pde_runtime_oauth_client', personSession: 'pde_runtime_owner_session'};
@@ -280,9 +321,12 @@ async function createSnapshotReader({connection, sourceCompilation, variant}) {
         },
     };
     const transformations = {
-        [ENTITY.client]: {id: 'runtime-v3-client-controller-v1', exec: ({row}) => ({...row, controller_kind: 'person', controller_id: 'person'})},
+        [ENTITY.client]: {id: 'runtime-client-controller-kind-v2', exec: ({row}) => ({
+            ...row, controller_kind: row.controller_kind === 'trusted-person' ? 'delegate' : row.controller_kind,
+            controller_id: row.controller_id ?? 'person',
+        })},
         [ENTITY.delegation]: {
-            id: variant === 'v3' ? 'runtime-v3-delegation-state-v1' : 'runtime-legacy-delegation-state-v1',
+            id: variant === 'v3' ? 'runtime-v3-delegation-state-v1' : 'runtime-delegation-state-v2',
             exec: ({row}) => {
                 const {resource, resource_connection_id, ...base} = row;
                 const key = `${row.client_id}\u0000${row.capability_id}`;
@@ -292,17 +336,22 @@ async function createSnapshotReader({connection, sourceCompilation, variant}) {
                     permission_json: base.permission_json ?? JSON.stringify({legacy_resource: resource, legacy_resource_connection_id: resource_connection_id ?? null}),
                     authorization_revision: base.authorization_revision ?? 1,
                     status: row.revoked_at == null ? (current ? 'active' : 'superseded') : 'revoked', current_marker: current ? 'current' : null,
-                    grantor_kind: 'person', grantor_id: 'person', mandate_id: null, mandate_generation: null,
+                    grantor_kind: base.grantor_kind === 'trusted-person' ? 'delegate' : (base.grantor_kind ?? 'person'),
+                    grantor_id: base.grantor_id ?? 'person', mandate_id: base.mandate_id ?? null, mandate_generation: base.mandate_generation ?? null,
                     superseded_at: current || row.revoked_at != null ? null : row.created_at, superseded_by: current || row.revoked_at != null ? null : active.get(key)?.id ?? null,
                 };
             },
         },
-        [ENTITY.audit]: {id: 'runtime-legacy-audit-operation-v1', exec: ({row}) => { const {resource, ...base} = row; return {...base, operation_id: base.operation_id ?? resource ?? null, trusted_person_id: null, mandate_id: null, mandate_generation: null, authority_kind: null, authority_id: null, grantor_kind: null, grantor_id: null}; }},
+        [ENTITY.mandate]: {id: 'runtime-previous-mandate-delegate-id-v1', exec: ({row}) => { const {trusted_person_id, ...base} = row; return {...base, delegate_id: base.delegate_id ?? trusted_person_id ?? null}; }},
+        [ENTITY.audit]: {id: 'runtime-audit-delegate-id-v2', exec: ({row}) => { const {resource, trusted_person_id, ...base} = row; return {
+            ...base, operation_id: base.operation_id ?? resource ?? null, delegate_id: base.delegate_id ?? trusted_person_id ?? null,
+            mandate_id: base.mandate_id ?? null, mandate_generation: base.mandate_generation ?? null,
+            authority_kind: base.authority_kind ?? null, authority_id: base.authority_id ?? null,
+            grantor_kind: base.grantor_kind === 'trusted-person' ? 'delegate' : (base.grantor_kind ?? null), grantor_id: base.grantor_id ?? null,
+        }; }},
         [ENTITY.accessToken]: {id: 'runtime-legacy-access-endpoint-v1', exec: ({row}) => { const {resource, ...base} = row; return {...base, protected_endpoint: base.protected_endpoint ?? resource}; }},
-    };
-    if (variant === 'previous') transformations[ENTITY.trustedPerson] = {
-        id: 'runtime-previous-trusted-person-email-v1',
-        exec: ({row}) => ({...row, email_normalized: row.email_normalized ?? `legacy-${Buffer.from(String(row.id)).toString('base64url')}@invalid.local`}),
+        [ENTITY.delegateSession]: {id: 'runtime-previous-delegate-session-id-v1', exec: ({row}) => { const {trusted_person_id, ...base} = row; return {...base, delegate_id: base.delegate_id ?? trusted_person_id ?? null}; }},
+        [ENTITY.delegateChallenge]: {id: 'runtime-previous-delegate-challenge-id-v1', exec: ({row}) => { const {trusted_person_id, ...base} = row; return {...base, delegate_id: base.delegate_id ?? trusted_person_id ?? null}; }},
     };
     if (variant === 'v3') {
         delete transformations[ENTITY.accessToken];
