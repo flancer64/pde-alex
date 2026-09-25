@@ -56,6 +56,8 @@
     "@flancer32/pde-desk-world-map": "git+https://github.com/flancer32/pde-desk-world-map.git#main",
     "@flancer32/pde-runtime": "git+https://github.com/flancer32/pde-runtime.git#main",
     "@flancer32/pde-sdk": "git+https://github.com/flancer32/pde-sdk.git#main",
+    "@flancer32/teq-cms": "git+https://github.com/flancer32/teq-cms.git#main",
+    "@flancer32/teq-tmpl": "git+https://github.com/flancer32/teq-tmpl.git#main",
     "@prebuilt-tdlib/linux-x64-glibc": "^0.1008067.0",
     "@teqfw/cli": "^2.5.0",
     "@teqfw/di": "^2.11.0",

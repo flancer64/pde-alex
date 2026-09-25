@@ -11,6 +11,12 @@ export default class Configurator {
      */
     configure(params) {
         void params;
-        return {container: {preprocessors: ['Pde_Alex_Bootstrap_Di_Preprocessor$']}};
+        return {
+            container: {
+                preprocessors: [
+                    'Pde_Alex_Bootstrap_Di_Preprocessor$',
+                ],
+            },
+        };
     }
 }

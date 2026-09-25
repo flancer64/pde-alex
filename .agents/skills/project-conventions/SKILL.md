@@ -34,6 +34,14 @@ description: Project-specific conventions. Use for every task in this repository
 - Do not modify installed packages under `node_modules`; configure them through the host package, `.env`, and `etc/log.policy`.
 - Never commit credentials from `.env` or state data from `var/`.
 
+## Dependency composition
+
+- `bootstrap/di-config.mjs` is the host composition root for the CLI Container. Include dependency-owned preprocessors and postprocessors that the application needs and whose contracts match the installed dependency graph, in a deterministic order, alongside host-owned policies.
+- Use a dependency's published composition contribution when available and compatible. When selecting another implementation, keep the application-specific substitution in `Pde_Alex_` components instead of modifying installed packages.
+- Package installation and namespace discovery do not automatically apply another package's Container preprocessors. Verify dependency substitution through the host's real runtime path; resolving a handler alone does not prove its methods use the selected implementation.
+- The current `@flancer32/teq-cms` DI preprocessor also maps `Fl32_Tmpl_Back_Api_Engine` to an adapter that calls `Fl32_Tmpl_Back_Config.getEngine()`. The installed `@flancer32/teq-tmpl` config has no `getEngine()` method, so this CMS preprocessor is not compatible with the current GitHub dependency pair. The host currently selects the CMS adapter and Nunjucks engine directly; revisit this when the package contracts align.
+- CMS routing requires `TEQFW_TMPL__DEFAULT_LOCALE` and `TEQFW_TMPL__ALLOWED_LOCALES`, plus host-owned templates under `tmpl/web/<locale>/`. Keep example locale settings in `.env.example`; never put credentials there.
+
 ## Validation
 
 - Run `teqfw-esm-validator` for changed TeqFW ESM modules under `src/`.

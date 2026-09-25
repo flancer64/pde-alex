@@ -12,6 +12,14 @@
  */
 export default function Preprocessor({lifestyle}) {
     return function hostPreprocessor(dependency, context) {
+        if (dependency.address === 'Fl32_Cms_Back_Api_Adapter') {
+            return Object.freeze({...dependency, address: 'Fl32_Cms_Back_Di_Replace_Adapter'});
+        }
+
+        if (dependency.address === 'Fl32_Tmpl_Back_Api_Engine') {
+            return Object.freeze({...dependency, address: 'Fl32_Tmpl_Back_Service_Engine_Nunjucks'});
+        }
+
         if (dependency.address === 'Pde_Runtime_Security_DelegateMailer'
             && context.parent?.address === 'Pde_Runtime_Security_DelegateAuthentication') {
             return Object.freeze({...dependency, address: 'Pde_Alex_Security_DelegateMailer'});
