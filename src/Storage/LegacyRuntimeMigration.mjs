@@ -419,7 +419,7 @@ export default class LegacyRuntimeMigration {
 
                 const sourceMap = {version: 2, namespace: SOURCE_NAMESPACE, ref: {}, deprecated: {}};
                 let selected;
-                for (const variant of ['previous', 'v3', 'legacy']) {
+                for (const variant of /** @type {const} */ (['previous', 'v3', 'legacy'])) {
                     const declaration = createSourceDeclaration(schemaProvider.getDeclaration(), variant);
                     const fragment = {declaration, filename: `pde.runtime://${variant}/teqfw.schema.json`, fragmentId: `pde.runtime.${variant}`, packageName: `pde.runtime.${variant}`};
                     const sourceCompilation = compile.assertResult({value: await compile.exec({adapter, fragments: [fragment, dbFragment], mapEnvelope: {declaration: sourceMap, filename: `pde.runtime://${variant}/map`, mapId: `pde.runtime.${variant}:map`, packageName: `pde.runtime.${variant}`}})});

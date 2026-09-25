@@ -9,7 +9,8 @@
     "etc",
     "LICENSE",
     "README.md",
-    "src"
+    "src",
+    "types.d.ts"
   ],
   "engines": {
     "node": ">=20"
@@ -32,12 +33,21 @@
         "command": {
           "default": "web:start"
         },
+        "commands": [
+          {
+            "id": "app:check",
+            "summary": "Check application startup and package composition.",
+            "component": "Pde_Alex_Cli_Command_AppCheck$"
+          }
+        ],
         "plugin": "Pde_Alex_Cli_Plugin$"
       }
     }
   },
   "scripts": {
-    "start": "teq web:start"
+    "start": "teq web:start",
+    "check:app": "teq app:check",
+    "typecheck": "tsc -p jsconfig.json"
   },
   "dependencies": {
     "@flancer32/pde-desk-echo": "git+https://github.com/flancer32/pde-desk-echo.git#main",
@@ -52,7 +62,9 @@
     "pg": "^8.23.0"
   },
   "devDependencies": {
-    "sqlite3": "^6.0.1"
+    "@types/node": "^26.1.2",
+    "sqlite3": "^6.0.1",
+    "typescript": "^5.9.3"
   },
   "allowScripts": {
     "sqlite3@6.0.1": true,

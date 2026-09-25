@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "maxNodeModuleJsDepth": 0,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ESNext",
+    "types": ["node"]
+  },
+  "include": [
+    "src",
+    "bootstrap",
+    "types.d.ts",
+    "node_modules/@teqfw/*/types.d.ts",
+    "node_modules/@flancer32/*/types.d.ts",
+    "node_modules/@flancer32/pde-sdk/src"
+  ]
+}

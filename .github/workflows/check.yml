@@ -1,0 +1,63 @@
+name: Application composition check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        env:
+          GH_PAT: ${{ secrets.PDE_PACKAGES_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${GH_PAT:-}" ]; then
+            AUTH="$(printf 'x-access-token:%s' "$GH_PAT" | base64 -w0)"
+            echo "::add-mask::$AUTH"
+
+            git config --global --add url."https://github.com/".insteadOf ssh://git@github.com/
+            git config --global --add url."https://github.com/".insteadOf git@github.com:
+
+            GIT_CONFIG_COUNT=1 \
+            GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $AUTH" \
+            npm ci --no-audit --no-fund
+          else
+            npm ci --no-audit --no-fund
+          fi
+
+      - name: Typecheck host source
+        run: npm run typecheck
+
+      - name: Prepare isolated state and Files root
+        run: mkdir -p "$RUNNER_TEMP/pde-alex-files" "$RUNNER_TEMP/pde-alex-telegram/database" "$RUNNER_TEMP/pde-alex-telegram/files"
+
+      - name: Check application composition
+        env:
+          PDE_RUNTIME__PERSON_SECRET: ci-composition-check-person-secret
+          PDE_DESK_FILES__ROOT: ${{ runner.temp }}/pde-alex-files
+          PDE_DESK_TELEGRAM__DATABASE_DIRECTORY: ${{ runner.temp }}/pde-alex-telegram/database
+          PDE_DESK_TELEGRAM__FILES_DIRECTORY: ${{ runner.temp }}/pde-alex-telegram/files
+          PDE_DESK_TELEGRAM__USE_TEST_DC: "true"
+          TEQFW_DB__CLIENT: sqlite3
+          TEQFW_DB__FILENAME: ${{ runner.temp }}/pde-alex-state.sqlite
+          TEQFW_DB__USE_NULL_AS_DEFAULT: "true"
+        run: npm run check:app

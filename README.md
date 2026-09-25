@@ -1,5 +1,29 @@
 # pde-alex
 Personal Digital Embassy for Alex
+
+## Application composition check
+
+Run the complete host startup and verify that all required Desks, Operations,
+Capabilities, and Delegation editors are registered:
+
+```sh
+npm run check:app
+```
+
+This starts the configured Runtime and package lifecycle plugins, then shuts
+them down after the check. It uses the application's configured database and
+may initialize Runtime state, so use an isolated local database when you do not
+want to touch the database configured for normal startup. CI runs the same
+command against temporary SQLite and filesystem locations on every push and
+pull request.
+
+Check JavaScript and JSDoc types in the host's `src` and `bootstrap` directories
+without emitting files:
+
+```sh
+npm run typecheck
+```
+
 # Database migration
 
 The explicit Runtime DEM migration is available as:
