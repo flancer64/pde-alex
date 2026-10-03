@@ -103,6 +103,17 @@ test('Runtime UI bypasses CMS while session checks and CMS rendering remain acti
         assert.equal(dashboard.status, 200);
         assert.match(await dashboard.text(), /<!doctype html>/i);
 
+        const desksResponse = await fetch(`${base}/api/v1/person/desks`, {headers: {cookie}});
+        assert.equal(desksResponse.status, 200);
+        const {desks} = await desksResponse.json();
+        const porkbun = desks.find(desk => desk.deskId === 'porkbun');
+        for (const capabilityId of ['porkbun.read', 'porkbun.write']) {
+            assert.equal(porkbun.capabilities.find(capability => capability.capabilityId === capabilityId).configurable, true, capabilityId);
+        }
+        const porkbunEditor = await fetch(`${base}/desk/porkbun/DelegationEditor/Factory.mjs`, {headers: {cookie}});
+        assert.equal(porkbunEditor.status, 200);
+        assert.match(await porkbunEditor.text(), /pde-delegation-complete/);
+
         const template = await fetch(`${base}/en/template-probe.html`);
         assert.equal(template.status, 200);
         assert.equal(await template.text(), '<p>CMS template en</p>');
