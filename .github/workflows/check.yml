@@ -54,6 +54,8 @@ jobs:
         env:
           PDE_RUNTIME__PERSON_SECRET: ci-composition-check-person-secret
           PDE_DESK_FILES__ROOT: ${{ runner.temp }}/pde-alex-files
+          PDE_DESK_PORKBUN__API_KEY: ci-composition-check-porkbun-key
+          PDE_DESK_PORKBUN__SECRET_API_KEY: ci-composition-check-porkbun-secret
           PDE_DESK_TELEGRAM__DATABASE_DIRECTORY: ${{ runner.temp }}/pde-alex-telegram/database
           PDE_DESK_TELEGRAM__FILES_DIRECTORY: ${{ runner.temp }}/pde-alex-telegram/files
           PDE_DESK_TELEGRAM__USE_TEST_DC: "true"

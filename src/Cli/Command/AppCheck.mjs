@@ -19,6 +19,15 @@ const REQUIRED_DESKS = Object.freeze({
             'filesystem.directory.create',
         ]),
     }),
+    porkbun: Object.freeze({
+        capabilities: Object.freeze(['porkbun.read', 'porkbun.write']),
+        operations: Object.freeze([
+            'porkbun.domain.list',
+            'porkbun.dns.list',
+            'porkbun.dns.create',
+            'porkbun.dns.delete',
+        ]),
+    }),
     telegram: Object.freeze({
         capabilities: Object.freeze([
             'telegram.account.read',

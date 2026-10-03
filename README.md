@@ -1,6 +1,22 @@
 # pde-alex
 Personal Digital Embassy for Alex
 
+## Porkbun Desk configuration
+
+The host includes `@flancer32/pde-desk-porkbun` for domain inventory and DNS
+record listing, creation, and deletion. Set `PDE_DESK_PORKBUN__API_KEY` and
+`PDE_DESK_PORKBUN__SECRET_API_KEY` in the application's private `.env` before
+startup; both are required. Optional endpoint and timeout settings are listed
+in `.env.example`. Never commit live credentials.
+
+The Desk registers through CLI lifecycle metadata without network requests
+at startup. CI uses dummy credentials only to verify composition. Live API
+access requires valid Porkbun credentials and API access enabled for the
+target domains. Runtime grants must explicitly authorize `porkbun.read` or
+`porkbun.write` for exact domain scopes; listing all account domains also
+requires `accountInventory: true` in the read Permission. DNS Operations
+require Porkbun to be authoritative for the requested domain.
+
 ## Application composition check
 
 Run the complete host startup and verify that all required Desks, Operations,
