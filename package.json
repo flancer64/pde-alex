@@ -47,6 +47,7 @@
   "scripts": {
     "start": "teq web:start",
     "check:app": "teq app:check",
+    "test:routing": "node --test test/integration/runtime-routing.test.mjs",
     "typecheck": "tsc -p jsconfig.json"
   },
   "dependencies": {

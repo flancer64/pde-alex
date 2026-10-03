@@ -16,6 +16,9 @@ export default class Configurator {
                 preprocessors: [
                     'Pde_Alex_Bootstrap_Di_Preprocessor$',
                 ],
+                postprocessors: [
+                    'Pde_Alex_Bootstrap_Di_Postprocessor$',
+                ],
             },
         };
     }

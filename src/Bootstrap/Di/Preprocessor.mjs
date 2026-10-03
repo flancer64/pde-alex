@@ -16,6 +16,10 @@ export default function Preprocessor({lifestyle}) {
             return Object.freeze({...dependency, address: 'Fl32_Cms_Back_Di_Replace_Adapter'});
         }
 
+        if (dependency.address === 'Fl32_Cms_Back_Publication_Policy') {
+            return Object.freeze({...dependency, address: 'Pde_Alex_Web_CmsPolicy'});
+        }
+
         if (dependency.address === 'Fl32_Tmpl_Back_Api_Engine') {
             return Object.freeze({...dependency, address: 'Fl32_Tmpl_Back_Service_Engine_Nunjucks'});
         }

@@ -19,6 +19,16 @@ require Porkbun to be authoritative for the requested domain.
 
 ## Application composition check
 
+The host CMS policy reserves `/assets/`, `/pub/`, `/person/`, `/delegate/`,
+`/oauth/`, `/desk/`, and `/vendor/` for Runtime and Desk static delivery. CMS
+static exclusions run after Runtime authentication and authorization handlers,
+so protected UI resources retain their session checks. Other paths continue
+through the CMS publication and template pipeline.
+
+Run `npm run test:routing` to check Runtime pages, assets, unauthenticated
+redirects, authenticated dashboard access, and ordinary CMS template and
+Markdown delivery against an isolated SQLite database and temporary host.
+
 Run the complete host startup and verify that all required Desks, Operations,
 Capabilities, and Delegation editors are registered:
 

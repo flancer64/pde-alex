@@ -47,6 +47,9 @@ jobs:
       - name: Typecheck host source
         run: npm run typecheck
 
+      - name: Verify Runtime and CMS HTTP routing
+        run: npm run test:routing
+
       - name: Prepare isolated state and Files root
         run: mkdir -p "$RUNNER_TEMP/pde-alex-files" "$RUNNER_TEMP/pde-alex-telegram/database" "$RUNNER_TEMP/pde-alex-telegram/files"
 
