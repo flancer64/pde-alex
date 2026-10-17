@@ -34,6 +34,7 @@ const REQUIRED_DESKS = Object.freeze({
             'telegram.contacts.read',
             'telegram.chats.read',
             'telegram.history.read',
+            'telegram.reactions.read',
             'telegram.messages.send',
         ]),
         operations: Object.freeze([
@@ -44,6 +45,7 @@ const REQUIRED_DESKS = Object.freeze({
             'telegram.chat.search',
             'telegram.chat.history',
             'telegram.message.get',
+            'telegram.message.reactions',
             'telegram.message.send',
         ]),
     }),
