@@ -105,6 +105,23 @@ export default function AppCheck({registry, editors, io}) {
                 }
             }
 
+            const telegram = actualById.get('telegram');
+            if (telegram) {
+                const history = telegram.operations.find(item => item.operationId === 'telegram.chat.history');
+                const message = telegram.operations.find(item => item.operationId === 'telegram.message.get');
+                const reactions = telegram.operations.find(item => item.operationId === 'telegram.message.reactions');
+                for (const schema of [history?.outputSchema?.properties?.result?.properties?.messages?.items,
+                    message?.outputSchema?.properties?.result]) {
+                    if (!schema || schema.additionalProperties !== false || Object.hasOwn(schema.properties ?? {}, 'reactions')) {
+                        failures.push('Telegram message-read schema must exclude reactions.');
+                    }
+                }
+                const item = reactions?.outputSchema?.properties?.result?.properties?.results?.items;
+                if (!item?.required?.includes('totalCount')) {
+                    failures.push('Telegram reaction items must require totalCount, including the unknown failure sentinel.');
+                }
+            }
+
             for (const {deskId, capabilityId} of REQUIRED_EDITORS) {
                 if (!editors.get(deskId, capabilityId)) failures.push(`Missing Delegation editor for '${deskId}/${capabilityId}'.`);
             }

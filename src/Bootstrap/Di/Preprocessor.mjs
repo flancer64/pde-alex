@@ -12,6 +12,11 @@
  */
 export default function Preprocessor({lifestyle}) {
     return function hostPreprocessor(dependency, context) {
+        // This v1 host uses Echo's explicitly supported legacy Registry lifecycle.
+        if (dependency.address === 'Pde_Desk_Echo_Cli_Plugin') {
+            return Object.freeze({...dependency, address: 'Pde_Desk_Echo_Lifecycle'});
+        }
+
         if (dependency.address === 'Fl32_Cms_Back_Api_Adapter') {
             return Object.freeze({...dependency, address: 'Fl32_Cms_Back_Di_Replace_Adapter'});
         }

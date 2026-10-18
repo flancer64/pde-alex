@@ -51,7 +51,9 @@ jobs:
         run: npm run test:routing
 
       - name: Prepare isolated state and Files root
-        run: mkdir -p "$RUNNER_TEMP/pde-alex-files" "$RUNNER_TEMP/pde-alex-telegram/database" "$RUNNER_TEMP/pde-alex-telegram/files"
+        run: |
+          cp .env.example .env
+          mkdir -p "$RUNNER_TEMP/pde-alex-files" "$RUNNER_TEMP/pde-alex-telegram"
 
       - name: Check application composition
         env:
@@ -59,8 +61,7 @@ jobs:
           PDE_DESK_FILES__ROOT: ${{ runner.temp }}/pde-alex-files
           PDE_DESK_PORKBUN__API_KEY: ci-composition-check-porkbun-key
           PDE_DESK_PORKBUN__SECRET_API_KEY: ci-composition-check-porkbun-secret
-          PDE_DESK_TELEGRAM__DATABASE_DIRECTORY: ${{ runner.temp }}/pde-alex-telegram/database
-          PDE_DESK_TELEGRAM__FILES_DIRECTORY: ${{ runner.temp }}/pde-alex-telegram/files
+          PDE_DESK_TELEGRAM__TDLIB_DIRECTORY: ${{ runner.temp }}/pde-alex-telegram
           PDE_DESK_TELEGRAM__USE_TEST_DC: "true"
           TEQFW_DB__CLIENT: sqlite3
           TEQFW_DB__FILENAME: ${{ runner.temp }}/pde-alex-state.sqlite

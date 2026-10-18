@@ -60,6 +60,15 @@ npm exec -- teq db:migrate
 
 Run it while the application is stopped and after taking an independent PostgreSQL backup. The command migrates the initial five-table predecessor, the Runtime v3 schema, and the previous Trusted Person schema to the latest Runtime DEM. The latest schema includes Client provenance, Delegation state, Mandate state, Trusted Person email identity, Trusted Person sessions, authentication challenges, and authentication-request rate-limit evidence. The command compiles source and target DEMs and invokes the TeqFW rebuild executor with explicit row transformations; when an older Trusted Person table has no email, it receives a deterministic `@invalid.local` marker because the source contains no email to recover. Source tables are moved to the `legacy_` namespace during the rebuild and removed only after the target catalog and migration history have been verified. The migration records effective-DEM snapshots and the applied schema transition through the TeqFW history service only after catalog validation succeeds.
 
+## Echo lifecycle compatibility
+
+This host uses the SDK Registry-based PDE v1 Runtime. Echo's current default
+plugin mounts browser assets and does not register the legacy `pde.echo` Desk.
+The host DI preprocessor therefore selects the package's documented
+`Pde_Desk_Echo_Lifecycle$` instead of `Pde_Desk_Echo_Cli_Plugin$`.
+`app:check` still requires the actual Echo Desk, Capability and Operation;
+it does not waive registration. This selection does not change Runtime grants.
+
 ## Telegram reaction refinement
 
 The Telegram Desk dependency follows its `v1` branch; `package-lock.json` pins the
@@ -68,7 +77,11 @@ exact deployed revision. The application composition check requires the explicit
 Grant that Capability separately through Runtime before a Client uses refinement;
 an existing history Permission does not automatically cover it. The operation
 returns non-paid totals for selected message IDs, with optional type breakdowns.
-For an economical digest, refine candidates with positive history snapshot
-reactions and find the maximum among successful candidate results. Candidate
-coverage may be incomplete. Paid reactions are excluded; failures are unknown,
-not zero. See the installed Telegram Desk usage guide for input/output shapes.
+History and individual message reads now exclude reaction fields. Request reactions
+separately for every message in the selected period; do not filter candidates by
+history metadata. Failed per-message reads return `status: failed`, `totalCount: -1`
+and a safe error; zero is a successfully confirmed empty list. Exclude unknowns
+from ranking and arithmetic, and disclose incomplete coverage. A top-five ranking
+includes every message tied with the fifth message's count. Paid reactions remain
+excluded and observations are not atomic. Refresh generated client/MCP schemas
+when upgrading. See the installed Telegram Desk migration and usage guides.
